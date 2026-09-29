@@ -1,21 +1,740 @@
+
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NEXORA — Check-in</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEXORA — Admin Portal</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f9ff;color:#07111f}.top{padding:22px 6vw;background:#fff;border-bottom:1px solid #dbe5f2;display:flex;justify-content:space-between;align-items:center}.top b{letter-spacing:.15em}.top a,.top button{color:#0756d6;text-decoration:none;background:none;border:0;cursor:pointer;font-weight:700}.wrap{max-width:1100px;margin:45px auto;padding:0 20px}.login{max-width:430px;margin:90px auto;background:#fff;border:1px solid #dbe5f2;border-radius:24px;padding:30px;box-shadow:0 20px 60px rgba(20,70,130,.08)}.login h1{margin-top:0}.field{display:flex;flex-direction:column;gap:7px;margin:15px 0}.field input{padding:14px;border:1px solid #cbd9ea;border-radius:12px;font:inherit}.btn{border:0;background:#0756d6;color:#fff;padding:13px 18px;border-radius:999px;font-weight:700;cursor:pointer}.btn:disabled{opacity:.6;cursor:not-allowed}.msg{margin-top:12px;padding:12px;border-radius:12px;display:none}.bad{background:#fff0f0;color:#a22a2a}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}.stat,.panel{background:#fff;border:1px solid #dbe5f2;border-radius:20px;padding:22px;box-shadow:0 15px 45px rgba(20,70,130,.07)}.stat small{color:#667085}.stat strong{display:block;font-size:38px;margin-top:8px}.panel{margin-top:18px}.scan{display:grid;grid-template-columns:1fr 1fr;gap:20px}.scanbox{min-height:320px}.input{display:flex;gap:10px}.input input{flex:1;padding:14px;border:1px solid #cbd9ea;border-radius:12px}.result{margin-top:16px;padding:15px;border-radius:14px;display:none}.ok{background:#eaf7ef;color:#17663a}.result.bad{background:#fff0f0;color:#a22a2a}table{width:100%;border-collapse:collapse;margin-top:15px}th,td{text-align:left;padding:12px;border-bottom:1px solid #e8eef7;font-size:14px}@media(max-width:800px){.stats,.scan{grid-template-columns:1fr}.input{flex-direction:column}}
-</style></head>
-<body><div class="top"><b>NEXORA · CHECK-IN</b><div><a href="index.html">Public RSVP</a> <button onclick="logout()">LOG OUT</button></div></div>
-<div id="loginView" class="login"><h1>Admin login</h1><p>Sign in to manage NEXORA event check-in.</p><div class="field"><label>Email</label><input id="loginEmail" type="email" autocomplete="username"></div><div class="field"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password"></div><button class="btn" style="width:100%" onclick="login()">SIGN IN</button><div id="loginMsg" class="msg bad"></div></div>
-<div id="appView" class="wrap" style="display:none"><h1>Event check-in</h1><p>Scan a ticket QR or enter the ticket code manually.</p>
-<div class="stats"><div class="stat"><small>TOTAL RSVPs</small><strong id="total">0</strong></div><div class="stat"><small>CHECKED IN</small><strong id="in">0</strong></div><div class="stat"><small>NOT CHECKED IN</small><strong id="out">0</strong></div></div>
-<div class="panel scan"><div><h3>Scan QR</h3><div id="reader" class="scanbox"></div></div><div><h3>Manual ticket code</h3><div class="input"><input id="code" placeholder="NXR-XXXXXX"><button class="btn" onclick="checkCode()">CHECK</button></div><div id="result" class="result"></div><h3 style="margin-top:35px">Recent registrations</h3><div style="overflow:auto"><table><thead><tr><th>Name</th><th>Type</th><th>Ticket</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table></div></div></div></div>
+*{box-sizing:border-box}
+bodybody{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:
+    radial-gradient(circle at top right,#162c55 0%,transparent 35%),
+    radial-gradient(circle at bottom left,#101b35 0%,transparent 35%),
+    #050912;
+  color:#f5f7ff;
+}
+.top{
+  padding:20px 6vw;
+  background:rgba(7,12,24,.88);
+  border-bottom:1px solid rgba(78,125,202,.25);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+.top b{
+  letter-spacing:.18em;
+  color:#ffffff;
+  font-size:15px;
+}
+.top a,.top button{color:#0756d6;text-decoration:none;background:none;border:0;cursor:pointer;font-weight:700}
+.wrap{max-width:1150px;margin:40px auto;padding:0 20px}
+.login{
+  max-width:430px;
+  margin:90px auto;
+  background:linear-gradient(145deg,rgba(15,24,43,.98),rgba(7,13,25,.98));
+  border:1px solid rgba(91,132,204,.24);
+  border-radius:26px;
+  padding:32px;
+  box-shadow:0 25px 80px rgba(0,0,0,.4);
+}
+.login h1{margin-top:0}
+.field{display:flex;flex-direction:column;gap:7px;margin:15px 0}
+.field input{
+  padding:14px;
+  border:1px solid rgba(100,140,205,.28);
+  border-radius:14px;
+  background:#080e1b;
+  color:#ffffff;
+  font:inherit;
+  outline:none;
+  transition:.2s ease;
+}
+
+.field input:focus{
+  border-color:#4f8cff;
+  box-shadow:0 0 0 3px rgba(79,140,255,.12);
+}
+.btn{
+  border:1px solid rgba(120,165,255,.25);
+  background:linear-gradient(135deg,#2563eb,#1746b8);
+  color:#fff;
+  padding:13px 20px;
+  border-radius:999px;
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:0 8px 24px rgba(37,99,235,.22);
+  transition:.2s ease;
+}
+
+.btn:hover{
+  transform:translateY(-1px);
+  box-shadow:0 12px 30px rgba(37,99,235,.3);
+}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.btn.secondary{
+  background:#111d34;
+  color:#9fc2ff;
+  border:1px solid rgba(103,145,214,.24);
+  box-shadow:none;
+}
+
+.btn.secondary:hover{
+  background:#172743;
+}
+.msg{margin-top:12px;padding:12px;border-radius:12px;display:none}
+.msg.show{display:block}
+.bad{background:#fff0f0;color:#a22a2a}
+.good{background:#eaf7ef;color:#17663a}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.stat,.panel{
+  background:linear-gradient(145deg,rgba(15,24,43,.96),rgba(8,14,27,.96));
+  border:1px solid rgba(91,132,204,.22);
+  border-radius:22px;
+  padding:22px;
+  box-shadow:
+    0 20px 60px rgba(0,0,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.035);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+.stat small{
+  color:#8295b5;
+  letter-spacing:.08em;
+  font-size:11px;
+  font-weight:700;
+}
+.stat strong{
+  display:block;
+  font-size:40px;
+  margin-top:8px;
+  color:#ffffff;
+  text-shadow:0 0 25px rgba(72,135,255,.18);
+}
+.panel h2,
+.panel h3{
+  color:#ffffff;
+  letter-spacing:.01em;
+}
+.scan{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.scanbox{min-height:280px}
+.input{display:flex;gap:10px}
+.input input{
+  flex:1;
+  padding:14px;
+  border:1px solid rgba(100,140,205,.28);
+  border-radius:14px;
+  background:#080e1b;
+  color:#ffffff;
+  font:inherit;
+  min-width:0;
+  outline:none;
+}
+
+.input input:focus{
+  border-color:#4f8cff;
+  box-shadow:0 0 0 3px rgba(79,140,255,.12);
+}
+.result{margin-top:16px;padding:15px;border-radius:14px;display:none}
+.result.show{display:block}
+.ok{background:#eaf7ef;color:#17663a}
+.result.bad{background:#fff0f0;color:#a22a2a}
+.settings{display:grid;grid-template-columns:1fr 1fr;gap:15px;align-items:end}
+.settings label{display:block;font-weight:700;margin-bottom:8px}
+.settings input{width:100%;padding:13px;border:1px solid #cbd9ea;border-radius:12px;font:inherit}
+.toggle{display:flex;align-items:center;gap:10px;margin:15px 0}
+.toggle input{width:18px;height:18px}
+table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  margin-top:15px;
+  overflow:hidden;
+  border:1px solid rgba(100,140,205,.18);
+  border-radius:14px;
+}
+
+th,td{
+  text-align:left;
+  padding:14px 12px;
+  border-bottom:1px solid rgba(100,140,205,.12);
+  font-size:14px;
+}
+
+th{
+  color:#8ea3c7;
+  background:#0b1222;
+  font-size:11px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+td{
+  color:#dce5f5;
+  background:#0a111f;
+}
+
+tr:last-child td{
+  border-bottom:0;
+}
+
+tr:hover td{
+  background:#0f192c;
+}
+
+.status-in{
+  color:#72e0aa;
+  font-weight:700;
+}
+
+.status-out{
+  color:#ffbf69;
+  font-weight:700;
+}
+th,td{text-align:left;padding:12px;border-bottom:1px solid #e8eef7;font-size:14px;white-space:nowrap}
+th{color:#667085}
+.status-in{color:#17663a;font-weight:700}
+.status-out{color:#a66a00;font-weight:700}
+.table-wrap{overflow:auto}
+.muted{
+  color:#8295b5;
+  line-height:1.6;
+}
+@media(max-width:800px){
+ .stats,.scan,.settings{grid-template-columns:1fr}
+ .input{flex-direction:column}
+ .top{padding:18px 20px}
+ .wrap{margin:25px auto}
+}
+</style>
+</head>
+
+<body>
+
+<div class="top">
+  <b>NEXORA · ADMIN</b>
+  <div>
+    <a href="index.html">Public RSVP</a>
+    <button id="logoutBtn" onclick="logout()" style="display:none">LOG OUT</button>
+  </div>
+</div>
+
+<div id="loginView" class="login">
+  <h1>Admin login</h1>
+  <p>Enter the shared password to manage NEXORA.</p>
+
+  <div class="field">
+    <label for="loginPassword">Admin password</label>
+    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Enter password">
+  </div>
+
+  <button id="loginBtn" class="btn" style="width:100%" onclick="login()">SIGN IN</button>
+  <div id="loginMsg" class="msg bad"></div>
+</div>
+
+<div id="appView" class="wrap" style="display:none">
+
+  <h1>Event dashboard</h1>
+  <p class="muted">Manage NEXORA registrations, ticket check-in, and event settings.</p>
+
+  <div class="stats">
+    <div class="stat">
+      <small>TOTAL RSVPs</small>
+      <strong id="total">0</strong>
+    </div>
+    <div class="stat">
+      <small>CHECKED IN</small>
+      <strong id="checkedIn">0</strong>
+    </div>
+    <div class="stat">
+      <small>NOT CHECKED IN</small>
+      <strong id="notCheckedIn">0</strong>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Event settings</h2>
+    <p class="muted">Control whether new registrations are accepted and set the attendee capacity.</p>
+
+    <div class="settings">
+      <div>
+        <label for="capacity">Maximum capacity</label>
+        <input id="capacity" type="number" min="1" step="1">
+      </div>
+      <div>
+        <label>Registration status</label>
+        <div class="toggle">
+          <input id="registrationOpen" type="checkbox">
+          <span>Accept new registrations</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn" id="saveSettingsBtn" onclick="saveSettings()">SAVE SETTINGS</button>
+    <div id="settingsMsg" class="msg"></div>
+  </div>
+
+  <div class="panel scan">
+    <div>
+      <h2>Scan ticket QR</h2>
+      <p class="muted">Allow camera access to scan attendee tickets.</p>
+      <div id="reader" class="scanbox"></div>
+      <button class="btn" id="startScanBtn" onclick="startScanner()">
+  START CAMERA SCANNER
+</button>
+      <button class="btn secondary" id="stopScanBtn" onclick="stopScanner()" style="display:none">STOP SCANNER</button>
+    </div>
+
+    <div>
+      <h2>Manual check-in</h2>
+      <p class="muted">Enter the ticket code if scanning is unavailable.</p>
+
+      <div class="input">
+        <input id="ticketCode" placeholder="NXR-XXXXXX" autocomplete="off">
+        <button class="btn" id="checkBtn" onclick="checkCode()">CHECK IN</button>
+      </div>
+
+      <div id="checkResult" class="result"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div>
+        <h2 style="margin-bottom:5px">Registrations</h2>
+        <p class="muted" style="margin-top:0">Latest attendee records from Supabase.</p>
+      </div>
+      <div style="margin:15px 0">
+  <input
+    id="searchName"
+    type="text"
+    placeholder="Search by name..."
+    autocomplete="off"
+    style ="width:100%;padding:14px 16px;border:1px solid rgba(100,140,205,.28);border-radius:14px;background:#080e1b;color:#ffffff;font:inherit;outline:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)"
+    oninput="renderRegistrations()"
+  >
+</div>
+      <button class="btn secondary" onclick="loadDashboard()">REFRESH</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Business type</th>
+            <th>Ticket</th>
+            <th>Status</th>
+             <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="registrationRows">
+          <tr><td colspan="5">Loading registrations...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
 <script>
-const {createClient}=supabase; const sb=createClient(NEXORA_SUPABASE.url,NEXORA_SUPABASE.publishableKey); let scanner=null;
-async function login(){const email=document.getElementById('loginEmail').value.trim(),password=document.getElementById('loginPassword').value;const m=document.getElementById('loginMsg');m.style.display='none';const {error}=await sb.auth.signInWithPassword({email,password});if(error){m.textContent=error.message;m.style.display='block';return;}showApp();}
-async function logout(){await sb.auth.signOut();location.reload()}
-async function showApp(){document.getElementById('loginView').style.display='none';document.getElementById('appView').style.display='block';await render();if(!scanner){scanner=new Html5QrcodeScanner('reader',{fps:10,qrbox:{width:230,height:230}},false);scanner.render(decoded=>checkCode(decoded),()=>{});}}
-async function render(){const {data,error}=await sb.from('registration').select('id,full_name,business_type,ticket_code,checked_in,checked_in_at,created_at').order('created_at',{ascending:false}).limit(100);if(error){console.error(error);return;}const c=data.filter(x=>x.checked_in).length;document.getElementById('total').textContent=data.length;document.getElementById('in').textContent=c;document.getElementById('out').textContent=data.length-c;document.getElementById('rows').innerHTML=data.map(x=>`<tr><td>${esc(x.full_name)}</td><td>${esc(x.business_type)}</td><td>${esc(x.ticket_code)}</td><td>${x.checked_in?'✓ Checked in':'Not checked in'}</td></tr>`).join('');}
-async function checkCode(code=document.getElementById('code').value.trim()){code=(code||'').trim();if(!code)return;const r=document.getElementById('result');r.style.display='block';r.className='result';r.textContent='Checking…';const {data,error}=await sb.rpc('checkin_ticket',{p_ticket_code:code});if(error){r.className='result bad';r.textContent='✕ '+error.message;return;}const x=data&&data[0]?data[0]:data;if(!x||!x.status){r.className='result bad';r.textContent='✕ Ticket not found.';return;}if(x.status==='already_checked_in'){r.className='result bad';r.textContent=`⚠ Already checked in — ${x.full_name} at ${new Date(x.checked_in_at).toLocaleString()}`;return;}r.className='result ok';r.textContent=`✓ Check-in successful — ${x.full_name} · ${x.ticket_code}`;document.getElementById('code').value='';await render();}
-function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-sb.auth.getSession().then(({data})=>{if(data.session)showApp();});
-</script></body></html>
+const { createClient } = supabase;
+
+const sb = createClient(
+  NEXORA_SUPABASE.url,
+  NEXORA_SUPABASE.publishableKey
+);
+
+let scanner = null;
+let scannerBusy = false;
+let registrations = [];
+
+function showMessage(elementId, message, type = "bad") {
+  const el = document.getElementById(elementId);
+  el.textContent = message;
+  el.className = "msg show " + type;
+}
+
+function hideMessage(elementId) {
+  const el = document.getElementById(elementId);
+  el.textContent = "";
+  el.className = "msg";
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+function getPassword() {
+  return sessionStorage.getItem("nexora_admin_password");
+}
+
+async function callAdminApi(action, payload = {}) {
+  const password = getPassword();
+
+  if (!password) {
+    throw new Error("Please log in again.");
+  }
+
+  const { data, error } = await sb.functions.invoke("nexora-admin-api", {
+    body: { password, action, payload }
+  });
+
+  if (error) {
+    throw new Error("Admin request failed. Please check your connection and try again.");
+  }
+
+  if (!data || !data.success) {
+    throw new Error(data?.message || "Request failed.");
+  }
+
+  return data;
+}
+
+async function login() {
+  const password = document.getElementById("loginPassword").value;
+  const button = document.getElementById("loginBtn");
+
+  hideMessage("loginMsg");
+
+  if (!password) {
+    showMessage("loginMsg", "Please enter the admin password.");
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "VERIFYING...";
+
+  try {
+    const { data, error } = await sb.functions.invoke("nexora-admin-login", {
+      body: { password }
+    });
+
+    if (error || !data?.success) {
+      throw new Error(data?.message || "Incorrect password.");
+    }
+
+    sessionStorage.setItem("nexora_admin_password", password);
+    document.getElementById("loginPassword").value = "";
+
+    await showDashboard();
+  } catch (error) {
+    showMessage("loginMsg", error.message || "Login failed.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "SIGN IN";
+  }
+}
+
+async function showDashboard() {
+  document.getElementById("loginView").style.display = "none";
+  document.getElementById("appView").style.display = "block";
+  document.getElementById("logoutBtn").style.display = "inline-block";
+
+  try {
+    await loadDashboard();
+  } catch (error) {
+    alert(error.message);
+    logout();
+  }
+}
+
+async function loadDashboard() {
+  const [registrationData, settingsData] = await Promise.all([
+    callAdminApi("get_registrations"),
+    callAdminApi("get_settings")
+  ]);
+
+  registrations = registrationData.registrations || [];
+
+  const checked = registrations.filter(row => row.checked_in).length;
+
+  document.getElementById("total").textContent = registrations.length;
+  document.getElementById("checkedIn").textContent = checked;
+  document.getElementById("notCheckedIn").textContent =
+    registrations.length - checked;
+
+  document.getElementById("capacity").value =
+    settingsData.settings.max_capacity;
+
+  document.getElementById("registrationOpen").checked =
+    settingsData.settings.registration_open;
+
+  renderRegistrations();
+}
+
+ 
+  function renderRegistrations() {
+  const tbody = document.getElementById("registrationRows");
+  const searchInput = document.getElementById("searchName");
+
+  const searchTerm = (searchInput?.value || "").trim().toLowerCase();
+
+  const filteredRegistrations = registrations.filter(row =>
+    String(row.full_name || "").toLowerCase().includes(searchTerm)
+  );
+
+  if (!filteredRegistrations.length) {
+    tbody.innerHTML = '<tr><td colspan="5">No matching registrations found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filteredRegistrations.map(row => `
+    <tr>
+      <td>${escapeHtml(row.full_name)}</td>
+      <td>${escapeHtml(row.email)}</td>
+      <td>${escapeHtml(row.business_type)}</td>
+      <td>${escapeHtml(row.ticket_code)}</td>
+      <td class="${row.checked_in ? "status-in" : "status-out"}">
+        ${row.checked_in ? "Checked in" : "Not checked in"}
+      </td>
+      <td>
+  <button
+    class="btn"
+    style="background:#b42318;padding:8px 12px;font-size:12px"
+    onclick="deleteRegistration('${row.id}')"
+  >
+    DELETE
+  </button>
+</td>
+    </tr>
+  `).join("");
+}
+
+async function deleteRegistration(id) {
+  const attendee = registrations.find(row => row.id === id);
+  const name = attendee?.full_name || "this registration";
+
+  const confirmed = confirm(
+    `Are you sure you want to delete ${name}'s registration?\n\nThis action cannot be undone.`
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await callAdminApi("delete_registration", {
+      id: String(id)
+    });
+
+    alert("Registration deleted successfully.");
+    await loadDashboard();
+
+  } catch (error) {
+    alert(error.message || "Could not delete the registration.");
+  }
+}
+async function saveSettings() {
+  const button = document.getElementById("saveSettingsBtn");
+  const capacity = Number(document.getElementById("capacity").value);
+  const registrationOpen =
+    document.getElementById("registrationOpen").checked;
+
+  hideMessage("settingsMsg");
+
+  if (!Number.isInteger(capacity) || capacity < 1) {
+    showMessage("settingsMsg", "Capacity must be a whole number greater than zero.");
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "SAVING...";
+
+  try {
+    await callAdminApi("set_settings", {
+      registration_open: registrationOpen,
+      max_capacity: capacity
+    });
+
+    showMessage("settingsMsg", "Event settings saved successfully.", "good");
+    await loadDashboard();
+  } catch (error) {
+    showMessage("settingsMsg", error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "SAVE SETTINGS";
+  }
+}
+
+function showCheckResult(message, success) {
+  const el = document.getElementById("checkResult");
+  el.textContent = message;
+  el.className = "result show " + (success ? "ok" : "bad");
+}
+
+async function checkCode() {
+  const input = document.getElementById("ticketCode");
+  const button = document.getElementById("checkBtn");
+  const code = input.value.trim().toUpperCase();
+
+  if (!code) {
+    showCheckResult("Please enter a ticket code.", false);
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "CHECKING...";
+
+  try {
+    const result = await callAdminApi("checkin_ticket", {
+      ticket_code: code
+    });
+
+    showCheckResult(
+      "SUCCESS — " + result.attendee.full_name + " checked in.",
+      true
+    );
+
+    input.value = "";
+    playTone("success");
+    await loadDashboard();
+  } catch (error) {
+    showCheckResult(error.message, false);
+    playTone("error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "CHECK IN";
+  }
+}
+
+async function startScanner() {
+  if (scanner) return;
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showCheckResult(
+      "Camera requires HTTPS or localhost. Open the secure website to scan tickets.",
+      false
+    );
+    return;
+  }
+
+  try {
+    scanner = new Html5Qrcode("reader");
+
+    document.getElementById("startScanBtn").style.display = "none";
+    document.getElementById("stopScanBtn").style.display = "inline-block";
+
+    await scanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 230, height: 230 } },
+      async decodedText => {
+        if (scannerBusy) return;
+        scannerBusy = true;
+
+        const match = decodedText.match(/NXR-[A-Z0-9]{6}/i);
+        const code = match ? match[0] : decodedText.trim();
+
+        document.getElementById("ticketCode").value = code;
+        await checkCode();
+
+        setTimeout(() => {
+          scannerBusy = false;
+        }, 1800);
+      },
+      () => {}
+    );
+
+  } catch (error) {
+    scanner = null;
+    document.getElementById("startScanBtn").style.display = "inline-block";
+    document.getElementById("stopScanBtn").style.display = "none";
+
+    showCheckResult(
+      "Camera access failed. Please allow camera permission in your browser.",
+      false
+    );
+  }
+}
+async function stopScanner() {
+  if (scanner) {
+    try {
+      if (scanner.isScanning) {
+        await scanner.stop();
+      }
+      await scanner.clear();
+    } catch (error) {
+      console.warn("Scanner stop:", error);
+    }
+    scanner = null;
+  }
+
+  document.getElementById("stopScanBtn").style.display = "none";
+document.getElementById("startScanBtn").style.display = "inline-block";
+}
+
+async function logout() {
+  await stopScanner();
+  sessionStorage.removeItem("nexora_admin_password");
+
+  document.getElementById("appView").style.display = "none";
+  document.getElementById("loginView").style.display = "block";
+  document.getElementById("logoutBtn").style.display = "none";
+
+  document.getElementById("loginPassword").value = "";
+  hideMessage("loginMsg");
+}
+
+function playTone(type) {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioContext();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+
+    const now = ctx.currentTime;
+
+    if (type === "success") {
+      oscillator.frequency.setValueAtTime(900, now);
+      oscillator.frequency.setValueAtTime(1200, now + 0.12);
+    } else {
+      oscillator.frequency.setValueAtTime(300, now);
+      oscillator.frequency.setValueAtTime(200, now + 0.15);
+    }
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.exponentialRampToValueAtTime(0.25, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+    oscillator.start(now);
+    oscillator.stop(now + 0.4);
+  } catch (error) {
+    console.warn("Sound unavailable:", error);
+  }
+}
+
+document.getElementById("loginPassword").addEventListener("keydown", event => {
+  if (event.key === "Enter") login();
+});
+
+document.getElementById("ticketCode").addEventListener("keydown", event => {
+  if (event.key === "Enter") checkCode();
+});
+
+if (getPassword()) {
+  showDashboard();
+}
+</script>
+
+</body>
+</html>
