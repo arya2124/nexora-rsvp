@@ -83,7 +83,80 @@ function prev(n){showStep(n-1)}
 function choose(el){document.querySelectorAll('.choice').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');businessType=el.dataset.type}
 function esc(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function ticketCode(){return 'NXR-'+Math.random().toString(36).slice(2,8).toUpperCase()}
+async function checkRegistrationStatus(){
+  try{
+    const { data, error } = await sb
+      .from("event_settings")
+      .select("registration_open")
+      .eq("id", true)
+      .single();
+
+    if(error) throw error;
+
+    const main = document.getElementById("main");
+
+    let closedMessage = document.getElementById("registrationClosedMessage");
+
+    if(!closedMessage){
+      closedMessage = document.createElement("div");
+      closedMessage.id = "registrationClosedMessage";
+      closedMessage.style.cssText = `
+        background:#fff0f0;
+        color:#a22a2a;
+        border:1px solid #f3b7b7;
+        border-radius:18px;
+        padding:22px;
+        margin:20px 0;
+        text-align:center;
+        font-weight:700;
+      `;
+      main.prepend(closedMessage);
+    }
+
+    if(!data.registration_open){
+      closedMessage.innerHTML = `
+        <div style="font-size:24px;margin-bottom:8px;">
+          REGISTRATIONS ARE CLOSED
+        </div>
+        <div style="font-size:15px;font-weight:500;">
+          Registration for this event is currently closed.<br>
+          Please check back later.
+        </div>
+      `;
+
+      closedMessage.style.display = "block";
+
+      document.querySelectorAll("#form input, #form button, #form select")
+        .forEach(el => el.disabled = true);
+
+    }else{
+      closedMessage.style.display = "none";
+
+      document.querySelectorAll("#form input, #form button, #form select")
+        .forEach(el => el.disabled = false);
+    }
+
+  }catch(error){
+    console.error("Registration status error:", error);
+  }
+}
 async function generateTicket(){
+    const { data: settings, error: settingsError } = await sb
+    .from("event_settings")
+    .select("registration_open, max_capacity")
+    .eq("id", true)
+    .single();
+
+  if (settingsError) {
+    console.error("SETTINGS ERROR:", settingsError);
+    alert("Unable to check registration status. Please try again.");
+    return;
+  }
+
+  if (!settings?.registration_open) {
+    alert("Registration is currently closed.");
+    return;
+  }
   const btn=[...document.querySelectorAll('[data-step="3"] .btn')][0];
   btn.disabled=true; btn.textContent='CREATING YOUR TICKET…';
   try{
@@ -110,7 +183,7 @@ async function generateTicket(){
     btn.textContent = "GENERATE MY TICKET →";
   }
 }  
-
+checkRegistrationStatus();
 </script>
 </body>
 </html>
